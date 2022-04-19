@@ -1,0 +1,171 @@
+---
+title: "Russian police drug related crimes: news media analysis"
+subtitle: "Draft. Do not cite"
+author: "Anastasia Kosacheva. Aleksei Knorre"
+output:
+  word_document:
+      reference_docx: "./supplementary/word_style.docx"
+---
+```{r global_options, echo = FALSE, warning=FALSE, message=FALSE}
+# Loading packages
+library(magrittr)
+library(knitr)
+library(captioner)
+library(ggplot2)
+
+
+opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+
+# Captions
+table_n <- captioner(prefix = "Table")
+plot_n <- captioner(prefix = "Image")
+
+# Load data
+load("../data/data_clean.RData")
+
+```
+
+### Metadata description
+
+There are 774 news messages with information about police drug related crimes from the start of 2013 till march 2018. There were 567 registered cases of caught policemen based on drug related crimes in Russia from 2005 till 2018. there were 151 cases in 2014 ad only 1 in 2007. The largest number of cases were in 2013 and 2014.
+
+There are regions of criminals: Republic of Tatarstan, Moscow, Saint Petersburg, Novosibirsk Oblast, Kabardino-Balkarian Republic, Leningrad Oblast, Moscow Oblast, Nizhny Novgorod Oblast, Altai Krai and Rostov Oblast.
+
+The largest number of cases - 49 - were in Republic of Tatarstan. It is 8 and a half percent from all cases. Second frequent region is Moscow - 41 cases, 7%. 36 cases from Saint Petersburg, 6%. 30 cases from Novosibirsk Oblast, 5%. The data was not corrected on the population of the regions. Yet the population of Republic of Tatarstan is smaller than that of Moscow and Moscow Oblast. Kabardino-Balkarian Republic has more cases than regions with equal number of population. There were no cases from 22 of regions of Russia.
+
+#####`r table_n("1", "Types of the media")`
+```{r}
+media_type_table <- as.data.frame(table(as.character(df_long_publishers$type)))
+levels(media_type_table$Var1) <- c("Federal", "Federal archive", "Federal online", "Regional", "Regional archive", "Regional online")
+media_type_table <- arrange(media_type_table,desc(Freq))
+media_type_table <- transform(media_type_table,percentage_column=(Freq/nrow(df_long_publishers))*100)
+
+names(media_type_table) <- c("Type of the media","Number of news messages","%")
+
+kable(media_type_table, format.args = list(decimal.mark = ',', big.mark = " "))
+```
+
+Percentage shows frequency of publication (662) divided by registered cases. The most frequent are regional media publications. Federal and regional online publications are nearly equally frequent. Yet, all of online publications are the least frequent.
+
+## Crimes descriptions
+
+#####`r table_n("2", "Most frequent criminal code articles")`
+```{r}
+articles <- as.data.frame(table(df_long_articles$articles_short))
+articles <- arrange(articles, desc(Freq))
+articles <- transform(articles,percentage_column=Freq/nrow(df)*100)
+articles <- articles[1:10,]
+ 
+names(articles) <- c("Criminal code articles","Number","%")
+
+kable(articles, format.args = list(decimal.mark = ',', big.mark = " "), booktabs = TRUE)
+```
+
+Percentage showes frequency of criminal code article (774) divided by registered cases (567). The most frequent article is 228 -- level of engagement into drug trafficking. Drug related police crimes are also connected with cases based on violations of articles 286, abuse of authority, and 290, bribery. The next most frequent article of criminal code is 159 -- fraud, which is criminal case and evidence falsification. Frequency does not consider differences between parts of articles where there is difference in crime content. For instance, difference between articles 228 and 228.1 -- drug possession and drug dealing.
+
+#####`r table_n("3", "Most frequent drugs")`
+```{r}
+drugs_1 <- as.data.frame(df$drugs_seized_1)
+drugs_2 <- as.data.frame(df$drugs_seized_2)
+colnames(drugs_1)[1] <- "drugs"
+colnames(drugs_2)[1] <- "drugs"
+drugs_both <- rbind(drugs_1,drugs_2)
+rm(list = c("drugs_1","drugs_2"))
+drugs_both <- group_by(drugs_both,drugs)
+drugs_both <- drugs_both[with(drugs_both,ave(seq_along(drugs), drugs, FUN=length))> 1,]
+drugs_both <- as.data.frame(table(drugs_both))
+drugs_both <- filter(drugs_both, Freq > 0)
+drugs_both <- arrange(drugs_both,desc(Freq))
+drugs_both <- transform(drugs_both,percentage_column=(Freq/(nrow(df)))*100)
+ 
+names(drugs_both) <- c("Drug","Number","%")
+
+kable(drugs_both, format.args = list(decimal.mark = ',', big.mark = " "), booktabs = TRUE)
+```
+
+Percentage shows frequency of drug (1134) divided by number of criminals (567). The most frequent are cannabinoids. The next frequent is heroin. Three times less frequent is amphetamine. Less frequent is synthetic substances, smoking substances, methadone, methamphetamine.
+
+#####`r table_n("4", "Weight of seized drugs")`
+```{r}
+drugs_weight_1 <- as.data.frame(cbind(df$drugs_seized_1,df$drugs_seized_weight_1))
+drugs_weight_2 <- as.data.frame(cbind(df$drugs_seized_2,df$drugs_seized_weight_2))
+drugs_weight_both <- rbind(drugs_weight_1, drugs_weight_2)
+rm(list = c("drugs_weight_1","drugs_weight_2"))
+drugs_weight_both <- na.omit(drugs_weight_both)
+drugs_weight_both$V2 <- as.numeric(format(drugs_weight_both$V2,decimal.mark="."))
+drugs_weight_both <- arrange(drugs_weight_both,desc(V2))
+drugs_weight_both <- unique(drugs_weight_both)
+drugs_weight_both <- drugs_weight_both[1:10,]
+ 
+names(drugs_weight_both) <- c("Drug", "Weght (grams)")
+
+kable(drugs_weight_both, format.args = list(decimal.mark = ',', big.mark = " "), booktabs = TRUE)
+```
+
+The largest weight of seized drugs is 171 kg of cannabinoids. There also is the seizure of 48 kg of opium, 36 kg of heroin and 14 kg of amphetamine.
+
+#####`r plot_n("2", "Weight of seized drugs destribution")`
+```{r}
+drugs_weight_1 <- as.data.frame(cbind(df$drugs_seized_1,df$drugs_seized_weight_1))
+drugs_weight_2 <- as.data.frame(cbind(df$drugs_seized_2,df$drugs_seized_weight_2))
+drugs_weight_both <- rbind(drugs_weight_1, drugs_weight_2)
+rm(list = c("drugs_weight_1","drugs_weight_2"))
+drugs_weight_both <- na.omit(drugs_weight_both)
+drugs_weight_both$V2 <- as.numeric(format(drugs_weight_both$V2,decimal.mark="."))
+ggplot(drugs_weight_both, aes(x=as.factor(drugs_weight_both$V1), y=drugs_weight_both$V2))+geom_boxplot()+theme(axis.text.x = element_text(angle=60, hjust=1)) +
+  labs(x = "Drug", y = "Weight (grams)")
+```
+
+Number of cases where there is information about the weight of the drug is less than the number of cases where there is information about what drug was seized. In half of the cases the weight of the seized drug is less than 1 kg. Large weights were seized only of heroin, cannabinoids, opium and amphetamine.
+
+#####`r table_n("5", "Drugs seized together")`
+```{r}
+drugs_drugs <- dplyr::group_by(df, drugs_seized_1, drugs_seized_2) %>% dplyr::summarize(n = n())
+drugs_drugs = na.omit(drugs_drugs)
+drugs_drugs <- arrange(drugs_drugs, desc(n))
+drugs_drugs <- drugs_drugs[1:10,]
+
+names(drugs_drugs) <- c("First drug", "Second drug", "Number")
+
+kable(drugs_drugs, format.args = list(decimal.mark = ',', big.mark = " "), booktabs = TRUE)
+```
+
+There were 6 cases of simultaneous seizure of cannabinoids and heroin, 4 cases of simultaneous seizure of smoking substances and natural substances, there were 3 cases of simultaneous seizure of heroin and methadone, of cannabinoids and amphetamine.
+
+## Criminals description
+
+#####`r table_n("6", "Positions and drugs")`
+```{r}
+drugs_position <- as.data.frame(table(df$position,df$drugs_seized_1))
+drugs_position <- arrange(drugs_position,desc(Freq))
+drugs_position <- filter(drugs_position, Freq > 0)
+drugs_position <- transform(drugs_position,percentage_column=(Freq/nrow(df))*100)
+drugs_position <- drugs_position[1:10,]
+ 
+names(drugs_position) <- c("Position", "Drug", "Number", "%")
+
+kable(drugs_position, format.args = list(decimal.mark = ',', big.mark = " "), booktabs = TRUE)
+```
+
+There were heroin seizures from 12 heads of police departments, 8 detectives and 6 senior detectives. There were cannabinoids seizures from 10 detectives, 6 heads of police departments, 5 senior detectives.
+
+#####`r table_n("7", "Drugs and criminal code articles")`
+```{r}
+drugs_articles <- as.data.frame(cbind(df_long_articles$drugs_seized_1,df_long_articles$articles_short))
+drugs_articles <- na.omit(drugs_articles)
+drugs_articles <- as.data.frame(table(drugs_articles$V1,drugs_articles$V2))
+drugs_articles <- arrange(drugs_articles,desc(Freq))
+drugs_articles <- filter(drugs_articles, Freq > 0)
+drugs_articles <- transform(drugs_articles,percentage_column=(Freq/nrow(df_long_articles))*100)
+drugs_articles <- drugs_articles[1:10,]
+ 
+names(drugs_articles) <- c("Drug", "Criminal code article", "Number", "%")
+
+kable(drugs_articles, format.args = list(decimal.mark = ',', big.mark = " "), booktabs = TRUE)
+```
+
+There were 33 cases where there were criminal cases on article 228 and the seizure of cannabionoids. There were 15 cases where there were criminal cases on article 228 and the seizure of heroin. There were 15 criminal cases on article 286 with the seizure of cannabinoids. There were 11 criminal cases on article 186 with the seizure of heroin.
+
+### Analysis
+
+There is connection between the cases where there was trial and the information about the department which caught the policeman. There were less cases with trial when policemen was caught by his own department. Also there is connection with the information about cases on money extorion and bribery. There were more cases with trial when crimes were extortion and bribery.
